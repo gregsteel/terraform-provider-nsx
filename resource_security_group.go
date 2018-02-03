@@ -44,7 +44,8 @@ func resourceSecurityGroup() *schema.Resource {
 			},
 			"dynamic_membership": &schema.Schema{
 				Type:     schema.TypeList,
-				Required: true,
+				Required: false,
+				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"set_operator": &schema.Schema{
@@ -81,6 +82,11 @@ func resourceSecurityGroup() *schema.Resource {
 						},
 					},
 				},
+			},
+			"memberid": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: false,
+				Optional: true,
 			},
 		},
 	}
@@ -165,11 +171,17 @@ func buildDynamicRules(m interface{}, rulesOperator string) ([]securitygroup.Dyn
 	return newDynamicCriterion, nil
 }
 
+func buildMemberDefinition(m interface{}) (securitygroup.MemberDefinition, error) {
+	newMemberDefinition := securitygroup.MemberDefinition{ObjectID: m.(string)}
+	return newMemberDefinition, nil
+}
+
 func resourceSecurityGroupCreate(d *schema.ResourceData, m interface{}) error {
 
 	nsxclient := m.(*gonsx.NSXClient)
 	var scopeid, name string
 	var dynamicMemberDefinition securitygroup.DynamicMemberDefinition
+	var memberDefinition securitygroup.MemberDefinition
 	var err error
 
 	// Gather the attributes for the resource.
@@ -193,11 +205,20 @@ func resourceSecurityGroupCreate(d *schema.ResourceData, m interface{}) error {
 		}
 		//dynamicMemberDefinition, err = getDynamicMemberDefinitionFromTemplate(v)
 	} else {
-		return errors.New("dynamicmembership list is required")
+		if v, ok := d.GetOk("memberid"); ok {
+			log.Printf(fmt.Sprintf("[DEBUG] memberid create : %+v", v))
+			memberDefinition, err = buildMemberDefinition(v)
+			if err != nil {
+				return err
+			}
+		} else {
+			return errors.New("dynamicmembership list or else memberid is required")
+		}
 	}
 
-	log.Printf(fmt.Sprintf("[DEBUG] securitygroup.NewCreate(%s, %s, %v", scopeid, name, dynamicMemberDefinition))
-	createAPI := securitygroup.NewCreate(scopeid, name, &dynamicMemberDefinition)
+
+	log.Printf(fmt.Sprintf("[DEBUG] securitygroup.NewCreate(%s, %s, %v", scopeid, name, dynamicMemberDefinition, memberDefinition))
+	createAPI := securitygroup.NewCreate(scopeid, name, &dynamicMemberDefinition, &memberDefinition)
 	err = nsxclient.Do(createAPI)
 
 	if err != nil {
@@ -215,6 +236,7 @@ func resourceSecurityGroupCreate(d *schema.ResourceData, m interface{}) error {
 func resourceSecurityGroupRead(d *schema.ResourceData, m interface{}) error {
 	nsxclient := m.(*gonsx.NSXClient)
 	var dynamicMembership securitygroup.DynamicMemberDefinition
+	var membership securitygroup.MemberDefinition
 	var scopeid, name string
 	var err error
 
@@ -236,7 +258,14 @@ func resourceSecurityGroupRead(d *schema.ResourceData, m interface{}) error {
 			return err
 		}
 	} else {
-		return errors.New("dynamic_membership is required")
+		if v, ok := d.GetOk("memberid"); ok {
+			membership, err = buildMemberDefinition(v)
+			if err != nil {
+				return err
+			}
+		} else {
+			return errors.New("dynamic_membership or else memberid is required")
+		}
 	}
 
 	// See if we can find our specifically named resource within the list of
@@ -256,13 +285,19 @@ func resourceSecurityGroupRead(d *schema.ResourceData, m interface{}) error {
 		return nil
 	}
 
-	log.Printf(fmt.Sprintf("[DEBUG] dynamicMembership := %v", securityGroupObject.DynamicMemberDefinition))
-	for idx, remoteDynamicSet := range securityGroupObject.DynamicMemberDefinition.DynamicSet {
-		dynamicMembership.DynamicSet[idx].Operator = remoteDynamicSet.Operator
-		readDynamicCriteria(dynamicMembership.DynamicSet[idx].DynamicCriteria,
-			remoteDynamicSet.DynamicCriteria)
+	if securityGroupObject.DynamicMemberDefinition != nil {
+		log.Printf(fmt.Sprintf("[DEBUG] dynamicMembership := %v", securityGroupObject.DynamicMemberDefinition))
+		for idx, remoteDynamicSet := range securityGroupObject.DynamicMemberDefinition.DynamicSet {
+			dynamicMembership.DynamicSet[idx].Operator = remoteDynamicSet.Operator
+			readDynamicCriteria(dynamicMembership.DynamicSet[idx].DynamicCriteria,
+				remoteDynamicSet.DynamicCriteria)
+		}
+		d.Set("dynamic_membership", dynamicMembership)
 	}
-	d.Set("dynamic_membership", dynamicMembership)
+	if securityGroupObject.MemberDefinition != nil {
+		log.Printf(fmt.Sprintf("[DEBUG] membership := %v", securityGroupObject.MemberDefinition))
+		d.Set("membership", membership)
+	}
 	return nil
 }
 
@@ -282,6 +317,7 @@ func resourceSecurityGroupUpdate(d *schema.ResourceData, m interface{}) error {
 
 	var scopeid string
 	var dynamicMembership securitygroup.DynamicMemberDefinition
+	var membership securitygroup.MemberDefinition
 	var err error
 
 	nsxclient := m.(*gonsx.NSXClient)
@@ -314,6 +350,17 @@ func resourceSecurityGroupUpdate(d *schema.ResourceData, m interface{}) error {
 		}
 		hasChanges = true
 		securityGroupObject.DynamicMemberDefinition = &dynamicMembership
+	}
+
+	if d.HasChange("membership") {
+		if v, ok := d.GetOk("membership"); ok {
+			membership, err = buildMemberDefinition(v)
+			if err != nil {
+				return err
+			}
+		}
+		hasChanges = true
+		securityGroupObject.MemberDefinition = &membership
 	}
 
 	if hasChanges {
