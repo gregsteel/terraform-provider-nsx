@@ -45,6 +45,7 @@ func Provider() terraform.ResourceProvider {
 			"nsx_edge_interface":          resourceEdgeInterface(),
 			"nsx_dhcp_relay":              resourceDHCPRelay(),
 			"nsx_service":                 resourceService(),
+			"nsx_ipset":                   resourceIPSet(),
 			"nsx_security_group":          resourceSecurityGroup(),
 			"nsx_security_tag":            resourceSecurityTag(),
 			"nsx_security_tag_attachment": resourceSecurityTagAttachment(),
