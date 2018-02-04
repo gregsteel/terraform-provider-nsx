@@ -3,55 +3,55 @@ package main
 import (
 	"fmt"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/sky-uk/gonsx"
-	"github.com/sky-uk/gonsx/api/securitypolicy"
+	"github.com/gregsteel/gonsx"
+	"github.com/gregsteel/gonsx/api/securitypolicy"
 	"log"
 )
 
 func resourceSecurityPolicyRule() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceSecurityPolicyRuleCreate,
-		Read:   resourceSecurityPolicyRuleRead,
+		Read:	 resourceSecurityPolicyRuleRead,
 		Delete: resourceSecurityPolicyRuleDelete,
 
 		Schema: map[string]*schema.Schema{
 
 			"name": {
-				Type:     schema.TypeString,
+				Type:		 schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
 
 			"securitypolicyname": {
-				Type:     schema.TypeString,
+				Type:		 schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
 
 			"action": {
-				Type:     schema.TypeString,
+				Type:		 schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
 
 			"direction": {
-				Type:     schema.TypeString,
+				Type:		 schema.TypeString,
 				Required: true,
 				ForceNew: true,
 			},
 
 			"securitygroupids": {
-				Type:     schema.TypeList,
+				Type:		 schema.TypeList,
 				ForceNew: true,
 				Optional: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
+				Elem:		 &schema.Schema{Type: schema.TypeString},
 			},
 
 			"serviceids": {
-				Type:     schema.TypeList,
+				Type:		 schema.TypeList,
 				Required: true,
 				ForceNew: true,
-				Elem:     &schema.Schema{Type: schema.TypeString},
+				Elem:		 &schema.Schema{Type: schema.TypeString},
 			},
 		},
 	}
@@ -120,42 +120,53 @@ func resourceSecurityPolicyRuleCreate(d *schema.ResourceData, m interface{}) err
 		return fmt.Errorf("serviceids argument is required")
 	}
 
-	log.Print("Getting policy object to modify")
-	policyToModify, err := getSingleSecurityPolicy(securitypolicyname, nsxclient)
-	log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
+	//Retry because concurrent processing can result in the SecurityPolicy Revision being out of sync
+	attempts := 5
+	for i := 0; ; i++ {
 
-	if err != nil {
-		return err
+			log.Print("Getting policy object to modify")
+			policyToModify, err := getSingleSecurityPolicy(securitypolicyname, nsxclient)
+			log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
+
+			if err != nil {
+				return err
+			}
+
+			existingAction := policyToModify.GetFirewallRuleByName(name)
+			if existingAction.Name != "" {
+				return fmt.Errorf("Firewall rule with same name already exists in this security policy")
+			}
+
+			if direction == "inbound" {
+				log.Printf(fmt.Sprintf("[DEBUG] policyToModify.AddInboundFirewallAction(%s, %s, %s, %s)", name, action, direction, serviceids))
+				modifyErr := policyToModify.AddInboundFirewallAction(name, action, direction, serviceids)
+				if err != nil {
+					return fmt.Errorf("Error in adding the rule to policy object: %s", modifyErr)
+				}
+			} else {
+				log.Printf(fmt.Sprintf("[DEBUG] policyToModify.AddOutboundFirewallAction(%s, %s, %s, %s, %s)", name, action, direction, securitygroupids, serviceids))
+				modifyErr := policyToModify.AddOutboundFirewallAction(name, action, direction, securitygroupids, serviceids)
+				if err != nil {
+					return fmt.Errorf("Error in adding the rule to policy object: %s", modifyErr)
+				}
+			}
+
+			log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
+			policyToModify.Revision += policyToModify.Revision
+			updateAPI := securitypolicy.NewUpdate(policyToModify.ObjectID, policyToModify)
+
+			err = nsxclient.Do(updateAPI)
+
+			if err == nil {
+				break
+			} else {
+				if i >= (attempts - 1) {
+					return fmt.Errorf("Error updating security policy: %v", err)
+				}
+			}
+			log.Println("Retrying updating security policy after error:", err)
 	}
 
-	existingAction := policyToModify.GetFirewallRuleByName(name)
-	if existingAction.Name != "" {
-		return fmt.Errorf("Firewall rule with same name already exists in this security policy")
-	}
-
-	if direction == "inbound" {
-		log.Printf(fmt.Sprintf("[DEBUG] policyToModify.AddInboundFirewallAction(%s, %s, %s, %s)", name, action, direction, serviceids))
-		modifyErr := policyToModify.AddInboundFirewallAction(name, action, direction, serviceids)
-		if err != nil {
-			return fmt.Errorf("Error in adding the rule to policy object: %s", modifyErr)
-		}
-	} else {
-		log.Printf(fmt.Sprintf("[DEBUG] policyToModify.AddOutboundFirewallAction(%s, %s, %s, %s, %s)", name, action, direction, securitygroupids, serviceids))
-		modifyErr := policyToModify.AddOutboundFirewallAction(name, action, direction, securitygroupids, serviceids)
-		if err != nil {
-			return fmt.Errorf("Error in adding the rule to policy object: %s", modifyErr)
-		}
-	}
-
-	log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
-	policyToModify.Revision += policyToModify.Revision
-	updateAPI := securitypolicy.NewUpdate(policyToModify.ObjectID, policyToModify)
-
-	err = nsxclient.Do(updateAPI)
-
-	if err != nil {
-		return fmt.Errorf("Error creating security group: %v", err)
-	}
 
 	if updateAPI.StatusCode() != 200 {
 		return fmt.Errorf("%s", updateAPI.ResponseObject())
@@ -216,24 +227,34 @@ func resourceSecurityPolicyRuleDelete(d *schema.ResourceData, m interface{}) err
 		return fmt.Errorf("securitypolicyname argument is required")
 	}
 
-	log.Print("Getting policy object to modify")
-	policyToModify, err := getSingleSecurityPolicy(securityPolicyName, nsxclient)
-	log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
+	//Retry because concurrent processing can result in the SecurityPolicy Revision being out of sync
+	attempts := 5
+	for i := 0; ; i++ {
 
-	if err != nil {
-		return err
-	}
+			log.Print("Getting policy object to modify")
+			policyToModify, err := getSingleSecurityPolicy(securityPolicyName, nsxclient)
+			log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
 
-	log.Printf(fmt.Sprintf("[DEBUG] policyToModify.Remove(%s)", name))
-	// FIXME:  RemoveFirewallActionByName probably return a error for consistency
-	policyToModify.RemoveFirewallActionByName(name)
-	log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
-	updateAPI := securitypolicy.NewUpdate(policyToModify.ObjectID, policyToModify)
+			if err != nil {
+				return err
+			}
 
-	err = nsxclient.Do(updateAPI)
+			log.Printf(fmt.Sprintf("[DEBUG] policyToModify.Remove(%s)", name))
+			// FIXME:	RemoveFirewallActionByName probably return a error for consistency
+			policyToModify.RemoveFirewallActionByName(name)
+			log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
+			updateAPI := securitypolicy.NewUpdate(policyToModify.ObjectID, policyToModify)
 
-	if err != nil {
-		return fmt.Errorf("Error creating security group: %v", err)
+			err = nsxclient.Do(updateAPI)
+
+			if err == nil {
+				break
+			} else {
+				if i >= (attempts - 1) {
+					return fmt.Errorf("Error updating security policy: %v", err)
+				}
+			}
+			log.Println("Retrying updating security policy after error:", err)
 	}
 
 	if updateAPI.StatusCode() != 200 {
