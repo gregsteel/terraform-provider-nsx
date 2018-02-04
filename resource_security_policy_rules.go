@@ -124,55 +124,55 @@ func resourceSecurityPolicyRuleCreate(d *schema.ResourceData, m interface{}) err
 	attempts := 5
 	for i := 0; ; i++ {
 
-			log.Print("Getting policy object to modify")
-			policyToModify, err := getSingleSecurityPolicy(securitypolicyname, nsxclient)
-			log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
+		log.Print("Getting policy object to modify")
+		policyToModify, err := getSingleSecurityPolicy(securitypolicyname, nsxclient)
+		log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
 
+		if err != nil {
+			return err
+		}
+
+		existingAction := policyToModify.GetFirewallRuleByName(name)
+		if existingAction.Name != "" {
+			return fmt.Errorf("Firewall rule with same name already exists in this security policy")
+		}
+
+		if direction == "inbound" {
+			log.Printf(fmt.Sprintf("[DEBUG] policyToModify.AddInboundFirewallAction(%s, %s, %s, %s)", name, action, direction, serviceids))
+			modifyErr := policyToModify.AddInboundFirewallAction(name, action, direction, serviceids)
 			if err != nil {
+				return fmt.Errorf("Error in adding the rule to policy object: %s", modifyErr)
+			}
+		} else {
+			log.Printf(fmt.Sprintf("[DEBUG] policyToModify.AddOutboundFirewallAction(%s, %s, %s, %s, %s)", name, action, direction, securitygroupids, serviceids))
+			modifyErr := policyToModify.AddOutboundFirewallAction(name, action, direction, securitygroupids, serviceids)
+			if err != nil {
+				return fmt.Errorf("Error in adding the rule to policy object: %s", modifyErr)
+			}
+		}
+
+		log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
+		policyToModify.Revision += policyToModify.Revision
+		updateAPI := securitypolicy.NewUpdate(policyToModify.ObjectID, policyToModify)
+
+		err = nsxclient.Do(updateAPI)
+
+		if err == nil {
+			if updateAPI.StatusCode() != 200 {
+				return fmt.Errorf("%s", updateAPI.ResponseObject())
+			}
+
+			d.SetId(name)
+			err := resourceSecurityPolicyRuleRead(d, m)
+			if err == nil {
 				return err
 			}
-
-			existingAction := policyToModify.GetFirewallRuleByName(name)
-			if existingAction.Name != "" {
-				return fmt.Errorf("Firewall rule with same name already exists in this security policy")
-			}
-
-			if direction == "inbound" {
-				log.Printf(fmt.Sprintf("[DEBUG] policyToModify.AddInboundFirewallAction(%s, %s, %s, %s)", name, action, direction, serviceids))
-				modifyErr := policyToModify.AddInboundFirewallAction(name, action, direction, serviceids)
-				if err != nil {
-					return fmt.Errorf("Error in adding the rule to policy object: %s", modifyErr)
-				}
-			} else {
-				log.Printf(fmt.Sprintf("[DEBUG] policyToModify.AddOutboundFirewallAction(%s, %s, %s, %s, %s)", name, action, direction, securitygroupids, serviceids))
-				modifyErr := policyToModify.AddOutboundFirewallAction(name, action, direction, securitygroupids, serviceids)
-				if err != nil {
-					return fmt.Errorf("Error in adding the rule to policy object: %s", modifyErr)
-				}
-			}
-
-			log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
-			policyToModify.Revision += policyToModify.Revision
-			updateAPI := securitypolicy.NewUpdate(policyToModify.ObjectID, policyToModify)
-
-			err = nsxclient.Do(updateAPI)
-
-			if err == nil {
-				if updateAPI.StatusCode() != 200 {
-					return fmt.Errorf("%s", updateAPI.ResponseObject())
-				}
-				break
-			} else {
-				if i >= (attempts - 1) {
-					return fmt.Errorf("Error updating security policy: %v", err)
-				}
-			}
-			log.Println("Retrying updating security policy after error:", err)
+		}
+		if i >= (attempts - 1) {
+			return fmt.Errorf("Error updating security policy: %v", err)
+		}
+		log.Println("Retrying updating security policy after error:", err)
 	}
-
-
-	d.SetId(name)
-	return resourceSecurityPolicyRuleRead(d, m)
 }
 
 func resourceSecurityPolicyRuleRead(d *schema.ResourceData, m interface{}) error {
@@ -260,7 +260,7 @@ func resourceSecurityPolicyRuleDelete(d *schema.ResourceData, m interface{}) err
 	}
 
 	// If we got here, the resource had existed, we deleted it and there was
-	// no error.  Notify Terraform of this fact and return successful
+	// no error.	Notify Terraform of this fact and return successful
 	// completion.
 	d.SetId("")
 	log.Printf(fmt.Sprintf("[DEBUG] firewall rule with name %s from securitypolicy %s deleted.", name, securityPolicyName))
