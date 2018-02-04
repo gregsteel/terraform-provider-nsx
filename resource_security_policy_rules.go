@@ -158,6 +158,9 @@ func resourceSecurityPolicyRuleCreate(d *schema.ResourceData, m interface{}) err
 			err = nsxclient.Do(updateAPI)
 
 			if err == nil {
+				if updateAPI.StatusCode() != 200 {
+					return fmt.Errorf("%s", updateAPI.ResponseObject())
+				}
 				break
 			} else {
 				if i >= (attempts - 1) {
@@ -167,10 +170,6 @@ func resourceSecurityPolicyRuleCreate(d *schema.ResourceData, m interface{}) err
 			log.Println("Retrying updating security policy after error:", err)
 	}
 
-
-	if updateAPI.StatusCode() != 200 {
-		return fmt.Errorf("%s", updateAPI.ResponseObject())
-	}
 
 	d.SetId(name)
 	return resourceSecurityPolicyRuleRead(d, m)
@@ -248,6 +247,9 @@ func resourceSecurityPolicyRuleDelete(d *schema.ResourceData, m interface{}) err
 			err = nsxclient.Do(updateAPI)
 
 			if err == nil {
+				if updateAPI.StatusCode() != 200 {
+					return fmt.Errorf("%s", updateAPI.ResponseObject())
+				}
 				break
 			} else {
 				if i >= (attempts - 1) {
@@ -255,10 +257,6 @@ func resourceSecurityPolicyRuleDelete(d *schema.ResourceData, m interface{}) err
 				}
 			}
 			log.Println("Retrying updating security policy after error:", err)
-	}
-
-	if updateAPI.StatusCode() != 200 {
-		return fmt.Errorf("%s", updateAPI.ResponseObject())
 	}
 
 	// If we got here, the resource had existed, we deleted it and there was
