@@ -240,7 +240,7 @@ func resourceSecurityPolicyRuleDelete(d *schema.ResourceData, m interface{}) err
 	log.Printf(fmt.Sprintf("[DEBUG] policyToModify.Remove(%s)", name))
 	// FIXME:  RemoveFirewallActionByName probably return a error for consistency
 	policyToModify.RemoveFirewallActionByName(name)
-	//log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
+	log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
 	updateAPI := securitypolicy.NewUpdate(policyToModify.ObjectID, policyToModify)
 
 	err = nsxclient.Do(updateAPI)
