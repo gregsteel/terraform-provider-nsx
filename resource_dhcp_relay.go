@@ -5,8 +5,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/gregsteel/gonsx"
-	"github.com/gregsteel/gonsx/api/dhcprelay"
+	"github.com/sky-uk/gonsx"
+	"github.com/sky-uk/gonsx/api/dhcprelay"
 )
 
 func getAllDhcpRelays(edgeID string, nsxclient *gonsx.NSXClient) (*dhcprelay.DhcpRelay, error) {

@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/gregsteel/gonsx"
-	"github.com/gregsteel/gonsx/api/ipset"
+	"github.com/sky-uk/gonsx"
+	"github.com/sky-uk/gonsx/api/ipset"
 	"log"
 )
 

@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/gregsteel/gonsx"
-	"github.com/gregsteel/gonsx/api/virtualwire"
+	"github.com/sky-uk/gonsx"
+	"github.com/sky-uk/gonsx/api/virtualwire"
 	"net/http"
 	"regexp"
 )
