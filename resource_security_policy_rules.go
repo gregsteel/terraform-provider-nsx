@@ -150,24 +150,27 @@ func resourceSecurityPolicyRuleCreate(d *schema.ResourceData, m interface{}) err
 		}
 	}
 
-	//log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
+	log.Printf("[DEBUG] - policyTOModify :%s", policyToModify)
 	policyToModify.Revision += policyToModify.Revision
 	updateAPI := securitypolicy.NewUpdate(policyToModify.ObjectID, policyToModify)
 
 	err = nsxclient.Do(updateAPI)
 	nsxclient.UnlockMutex()
 
-	if err == nil {
-		if updateAPI.StatusCode() != 200 {
-			return fmt.Errorf("%s", updateAPI.ResponseObject())
-		}
-		log.Printf("[DEBUG] - policyModified :%s", policyToModify)
+	if err != nil {
+		return fmt.Errorf("Error creating security group: %v", err)
+	}
 
-		d.SetId(name)
-		err := resourceSecurityPolicyRuleRead(d, m)
-		if err == nil {
-			return err
-		}
+	if updateAPI.StatusCode() != 200 {
+		return fmt.Errorf("%s", updateAPI.ResponseObject())
+	}
+
+	log.Printf("[DEBUG] - policyModified :%s", policyToModify)
+
+	d.SetId(name)
+	err = resourceSecurityPolicyRuleRead(d, m)
+	if err == nil {
+		return err
 	}
 	return fmt.Errorf("Error updating security policy: %v", err)
 }
@@ -243,14 +246,14 @@ func resourceSecurityPolicyRuleDelete(d *schema.ResourceData, m interface{}) err
 	err = nsxclient.Do(updateAPI)
 	nsxclient.UnlockMutex()
 
-	if err == nil {
-		if updateAPI.StatusCode() != 200 {
-			return fmt.Errorf("%s", updateAPI.ResponseObject())
-		}
-		log.Printf("[DEBUG] - policyModified :%s", policyToModify)
-	} else {
-		return fmt.Errorf("Error updating security policy: %v", err)
+	if err != nil {
+		return fmt.Errorf("Error creating security group: %v", err)
 	}
+
+	if updateAPI.StatusCode() != 200 {
+		return fmt.Errorf("%s", updateAPI.ResponseObject())
+	}
+	log.Printf("[DEBUG] - policyModified :%s", policyToModify)
 
 	// If we got here, the resource had existed, we deleted it and there was
 	// no error.  Notify Terraform of this fact and return successful
