@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	"regexp"
+	"time"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/sky-uk/gonsx"
 	"github.com/sky-uk/gonsx/api/virtualwire"
-	"net/http"
-	"regexp"
 )
 
 func resourceLogicalSwitch() *schema.Resource {
@@ -221,14 +223,23 @@ func resourceLogicalSwitchDelete(d *schema.ResourceData, m interface{}) error {
 	}
 
 	deleteAPI := virtualwire.NewDelete(virtualWireID)
-	err := nsxClient.Do(deleteAPI)
-	if err != nil {
-		return fmt.Errorf("Error while deleting logical switch ID %s. Error: %v", virtualWireID, err)
-	}
 
-	responseCode := deleteAPI.StatusCode()
-	if responseCode != http.StatusOK && responseCode != http.StatusNotFound {
-		return fmt.Errorf("Error while deleting logical switch ID %s. Received invalid HTTP response code %d", virtualWireID, responseCode)
+	retries := 0
+	for {
+		err := nsxClient.Do(deleteAPI)
+		if err != nil {
+			return fmt.Errorf("Error while deleting logical switch ID %s. Error: %v", virtualWireID, err)
+		}
+		responseCode := deleteAPI.StatusCode()
+		if responseCode != http.StatusOK && responseCode != http.StatusNotFound {
+			retries++
+			if retries > 5 {
+				return fmt.Errorf("Error while deleting logical switch ID %s. Received invalid HTTP response code %d", virtualWireID, responseCode)
+			}
+			time.Sleep(time.Second)
+		} else {
+			break
+		}
 	}
 
 	d.SetId("")
