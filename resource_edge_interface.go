@@ -71,7 +71,7 @@ func resourceEdgeInterface() *schema.Resource {
 	}
 }
 
-func buildAddressGroups(addressGroups []interface{}) []edgeinterface.AddressGroup {
+func buildInterfaceAddressGroups(addressGroups []interface{}) []edgeinterface.AddressGroup {
 	var addressGroupList []edgeinterface.AddressGroup
 	for _, address := range addressGroups {
 		data := address.(map[string]interface{})
@@ -106,7 +106,7 @@ func resourceEdgeInterfaceCreate(d *schema.ResourceData, m interface{}) error {
 	}
 
 	if v, ok := d.GetOk("addressgroups"); ok {
-		edge.AddressGroups.AddressGroups = buildAddressGroups(v.([]interface{}))
+		edge.AddressGroups.AddressGroups = buildInterfaceAddressGroups(v.([]interface{}))
 	}
 
 	requestPayload := new(edgeinterface.EdgeInterfaces)
@@ -128,7 +128,7 @@ func resourceEdgeInterfaceCreate(d *schema.ResourceData, m interface{}) error {
 	}
 
 	edges := createAPI.GetResponse()
-	setEdge(d, edges.Interfaces[0])
+	setEdgeInterfaces(d, edges.Interfaces[0])
 	d.SetId(edgeid + "_" + strconv.Itoa(edges.Interfaces[0].Index))
 	return nil
 }
@@ -152,12 +152,12 @@ func resourceEdgeInterfaceRead(d *schema.ResourceData, m interface{}) error {
 	}
 
 	edge := api.GetResponse()
-	setEdge(d, edge)
+	setEdgeInterfaces(d, edge)
 
 	return nil
 }
 
-func setEdge(d *schema.ResourceData, edge edgeinterface.EdgeInterface) {
+func setEdgeInterfaces(d *schema.ResourceData, edge edgeinterface.EdgeInterface) {
 	d.Set("name", edge.Name)
 	d.Set("label", edge.Label)
 	d.Set("mtu", edge.Mtu)
@@ -249,7 +249,7 @@ func resourceEdgeInterfaceUpdate(d *schema.ResourceData, m interface{}) error {
 	if d.HasChange("addressgroups") {
 		hasChanges = true
 		v := d.Get("addressgroups")
-		updatedEdge.AddressGroups.AddressGroups = buildAddressGroups(v.([]interface{}))
+		updatedEdge.AddressGroups.AddressGroups = buildInterfaceAddressGroups(v.([]interface{}))
 	}
 
 	if hasChanges {
