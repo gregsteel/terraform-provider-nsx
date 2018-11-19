@@ -576,6 +576,7 @@ func resourceEdgeGatewayCreate(d *schema.ResourceData, m interface{}) error {
 			edge.Features.Routing.OSPFRouting = ospfRouting
 			var ospfRoutingInterfaces edgegateway.OSPFInterfaces
 			var ospfRoutingAreas edgegateway.OSPFAreas
+			edge.Features.Routing.OSPFRouting.Enabled = true
 			edge.Features.Routing.OSPFRouting.OSPFInterfaces = ospfRoutingInterfaces
 			edge.Features.Routing.OSPFRouting.OSPFAreas = ospfRoutingAreas
 			edge.Features.Routing.OSPFRouting.OSPFInterfaces.OSPFInterfaceList = buildOSPFInterfaces(v.([]interface{}))
@@ -604,11 +605,13 @@ func resourceEdgeGatewayCreate(d *schema.ResourceData, m interface{}) error {
 	var dhcp edgegateway.Dhcp
 	edge.Features.Dhcp = dhcp
 	if v, ok := d.GetOk("dhcp_static_bindings"); ok {
+		edge.Features.Dhcp.Enabled = true
 		var dhcpStaticBindings edgegateway.DhcpStaticBindings
 		edge.Features.Dhcp.StaticBindings = dhcpStaticBindings
 		edge.Features.Dhcp.StaticBindings.StaticBindingList = buildDhcpStaticBindings(v.([]interface{}))
 	}
 	if v, ok := d.GetOk("dhcp_ip_pools"); ok {
+		edge.Features.Dhcp.Enabled = true
 		var dhcpIpPools edgegateway.DhcpIpPools
 		edge.Features.Dhcp.IpPools = dhcpIpPools
 		edge.Features.Dhcp.IpPools.IpPoolList = buildDhcpIpPools(v.([]interface{}))
