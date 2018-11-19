@@ -139,15 +139,233 @@ func resourceEdgeGateway() *schema.Resource {
 					},
 				},
 			},
+			"firewall_default_policy_action": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: false,
+				Optional: true,
+				Default:  "accept",
+			},
+			"firewall_default_policy_logging_enabled": &schema.Schema{
+				Type:     schema.TypeBool,
+				Required: false,
+				Optional: true,
+				Default:  false,
+			},
+			"firewall_tcp_timeout_established": &schema.Schema{
+				Type:     schema.TypeInt,
+				Required: false,
+				Optional: true,
+				Default:  300000,
+			},
+			"router_id": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: false,
+				Optional: true,
+			},
+			"router_ecmp": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: false,
+				Optional: true,
+			},
+			"static_routing_default_vnic": &schema.Schema{
+				Type:     schema.TypeInt,
+				Required: false,
+				Optional: true,
+			},
+			"static_routing_default_gateway": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: false,
+				Optional: true,
+			},
+			"static_routing_default_mtu": &schema.Schema{
+				Type:     schema.TypeInt,
+				Required: false,
+				Optional: true,
+			},
+			"routing_ospf_areas": &schema.Schema{
+				Type:     schema.TypeList,
+				Required: false,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"area_id": &schema.Schema{
+							Type:     schema.TypeInt,
+							Required: true,
+							Optional: false,
+						},
+						"type": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+							Default:  "normal",
+						},
+					},
+				},
+			},
+			"routing_ospf_interfaces": &schema.Schema{
+				Type:     schema.TypeList,
+				Required: false,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"area_id": &schema.Schema{
+							Type:     schema.TypeInt,
+							Required: true,
+							Optional: false,
+						},
+						"vnic_id": &schema.Schema{
+							Type:     schema.TypeInt,
+							Required: true,
+							Optional: false,
+						},
+					},
+				},
+			},
+			"routing_ospf_redistribution_enabled": &schema.Schema{
+				Type:     schema.TypeBool,
+				Required: false,
+				Optional: true,
+				Default:  false,
+			},
+			"routing_ospf_graceful_restart": &schema.Schema{
+				Type:     schema.TypeBool,
+				Required: false,
+				Optional: true,
+				Default:  true,
+			},
+			"routing_ospf_default_originate": &schema.Schema{
+				Type:     schema.TypeBool,
+				Required: false,
+				Optional: true,
+				Default:  false,
+			},
+			"dhcp_static_bindings": &schema.Schema{
+				Type:     schema.TypeList,
+				Required: false,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"macaddress": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"vm_id": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"vnic_id": &schema.Schema{
+							Type:     schema.TypeInt,
+							Required: false,
+							Optional: true,
+						},
+						"hostname": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"ipaddress": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"subnetmask": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"defaultgateway": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"domainname": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"primarydns": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"secondarydns": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"lease": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"autoconfigure_dns": &schema.Schema{
+							Type:     schema.TypeBool,
+							Required: false,
+							Optional: true,
+						},
+					},
+				},
+			},
+			"dhcp_ip_pools": &schema.Schema{
+				Type:     schema.TypeList,
+				Required: false,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"iprange": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"defaultgateway": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"subnetmask": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"domainname": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"primarydns": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"secondarydns": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"lease": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: false,
+							Optional: true,
+						},
+						"autoconfigure_dns": &schema.Schema{
+							Type:     schema.TypeBool,
+							Required: false,
+							Optional: true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
 
-func buildAppliances(appliances []interface{}) []edgegateway.EdgeGatewayAppliance {
-	var applianceList []edgegateway.EdgeGatewayAppliance
+func buildAppliances(appliances []interface{}) []edgegateway.Appliance {
+	var applianceList []edgegateway.Appliance
 	for _, appliance := range appliances {
 		data := appliance.(map[string]interface{})
-		appl := edgegateway.EdgeGatewayAppliance{
+		appl := edgegateway.Appliance{
 			ResourcePoolId: data["resource_pool_id"].(string),
 			DatastoreId:    data["datastore_id"].(string),
 			VmFolderId:     data["vmfolder_id"].(string),
@@ -191,6 +409,74 @@ func buildVnics(vnics []interface{}) []edgegateway.EdgeVnic {
 	return vnicList
 }
 
+func buildOSPFInterfaces(ospfInterfaces []interface{}) []edgegateway.OSPFInterface {
+	var ospfInterfaceList []edgegateway.OSPFInterface
+	for _, ospfInterface := range ospfInterfaces {
+		data := ospfInterface.(map[string]interface{})
+		intf := edgegateway.OSPFInterface{
+			Vnic:   data["vnic_id"].(int),
+			AreaId: data["area_id"].(int),
+		}
+		ospfInterfaceList = append(ospfInterfaceList, intf)
+	}
+	return ospfInterfaceList
+}
+
+func buildOSPFAreas(ospfAreas []interface{}) []edgegateway.OSPFArea {
+	var ospfAreaList []edgegateway.OSPFArea
+	for _, ospfArea := range ospfAreas {
+		data := ospfArea.(map[string]interface{})
+		area := edgegateway.OSPFArea{
+			AreaId: data["area_id"].(int),
+			Type:   data["type"].(string),
+		}
+		ospfAreaList = append(ospfAreaList, area)
+	}
+	return ospfAreaList
+}
+
+func buildDhcpStaticBindings(staticBindings []interface{}) []edgegateway.DhcpStaticBinding {
+	var staticBindingList []edgegateway.DhcpStaticBinding
+	for _, staticBinding := range staticBindings {
+		data := staticBinding.(map[string]interface{})
+		sb := edgegateway.DhcpStaticBinding{
+			MacAddress:          data["macaddress"].(string),
+			VmId:                data["vm_id"].(string),
+			VnicId:              data["vnic_id"].(int),
+			Hostname:            data["hostname"].(string),
+			IpAddress:           data["ipaddress"].(string),
+			SubnetMask:          data["subnetmask"].(string),
+			DefaultGateway:      data["defaultgateway"].(string),
+			DomainName:          data["domainname"].(string),
+			PrimaryNameServer:   data["primarydns"].(string),
+			SecondaryNameServer: data["secondarydns"].(string),
+			LeaseTime:           data["lease"].(string),
+			AutoConfigureDNS:    data["autoconfigure_dns"].(bool),
+		}
+		staticBindingList = append(staticBindingList, sb)
+	}
+	return staticBindingList
+}
+
+func buildDhcpIpPools(ipPools []interface{}) []edgegateway.DhcpIpPool {
+	var ipPoolList []edgegateway.DhcpIpPool
+	for _, ipPool := range ipPools {
+		data := ipPool.(map[string]interface{})
+		ipp := edgegateway.DhcpIpPool{
+			IpRange:             data["iprange"].(string),
+			SubnetMask:          data["subnetmask"].(string),
+			DefaultGateway:      data["defaultgateway"].(string),
+			DomainName:          data["domainname"].(string),
+			PrimaryNameServer:   data["primarydns"].(string),
+			SecondaryNameServer: data["secondarydns"].(string),
+			LeaseTime:           data["lease"].(string),
+			AutoConfigureDNS:    data["autoconfigure_dns"].(bool),
+		}
+		ipPoolList = append(ipPoolList, ipp)
+	}
+	return ipPoolList
+}
+
 func resourceEdgeGatewayCreate(d *schema.ResourceData, m interface{}) error {
 	nsxclient := m.(*gonsx.NSXClient)
 
@@ -214,7 +500,7 @@ func resourceEdgeGatewayCreate(d *schema.ResourceData, m interface{}) error {
 		edge.EnableFips = false
 	}
 
-	var appliances edgegateway.EdgeGatewayAppliances
+	var appliances edgegateway.Appliances
 	edge.Appliances = appliances
 	if v, ok := d.GetOk("enable_core_dump"); ok {
 		edge.Appliances.EnableCoreDump = v.(bool)
@@ -228,6 +514,104 @@ func resourceEdgeGatewayCreate(d *schema.ResourceData, m interface{}) error {
 	}
 	if v, ok := d.GetOk("vnics"); ok {
 		edge.Vnics.VnicList = buildVnics(v.([]interface{}))
+	}
+
+	var features edgegateway.Features
+	edge.Features = features
+
+	var firewall edgegateway.Firewall
+	edge.Features.Firewall = firewall
+	var defaultPolicy edgegateway.FirewallDefaultPolicy
+	edge.Features.Firewall.DefaultPolicy = defaultPolicy
+	if v, ok := d.GetOk("firewall_default_policy_action"); ok {
+		edge.Features.Firewall.DefaultPolicy.Action = v.(string)
+	} else {
+		edge.Features.Firewall.DefaultPolicy.Action = "accept"
+	}
+	if v, ok := d.GetOk("firewall_default_policy_logging_enabled"); ok {
+		edge.Features.Firewall.DefaultPolicy.LoggingEnabled = v.(bool)
+	} else {
+		edge.Features.Firewall.DefaultPolicy.LoggingEnabled = false
+	}
+
+	var firewallGlobalConfig edgegateway.FirewallGlobalConfig
+	edge.Features.Firewall.GlobalConfig = firewallGlobalConfig
+	if v, ok := d.GetOk("firewall_tcp_timeout_established"); ok {
+		edge.Features.Firewall.GlobalConfig.TcpTimeoutEstablished = v.(int)
+	} else {
+		edge.Features.Firewall.GlobalConfig.TcpTimeoutEstablished = 300000
+	}
+
+	//Routing config is optional
+	if v, ok := d.GetOk("router_id"); ok {
+		var routing edgegateway.Routing
+		edge.Features.Routing = routing
+		var routingGlobalConfig edgegateway.RoutingGlobalConfig
+		edge.Features.Routing.GlobalConfig = routingGlobalConfig
+		edge.Features.Routing.GlobalConfig.RouterId = v.(string)
+		if v, ok := d.GetOk("router_ecmp"); ok {
+			edge.Features.Routing.GlobalConfig.ECMP = v.(bool)
+		} else {
+			edge.Features.Routing.GlobalConfig.ECMP = false
+		}
+		var routingStaticRouting edgegateway.StaticRouting
+		edge.Features.Routing.StaticRouting = routingStaticRouting
+		var routingStaticRoutingDefault edgegateway.StaticRoutingDefault
+		edge.Features.Routing.StaticRouting.DefaultRoute = routingStaticRoutingDefault
+		if v, ok := d.GetOk("static_routing_default_vnic"); ok {
+			edge.Features.Routing.StaticRouting.DefaultRoute.Vnic = v.(int)
+		}
+		if v, ok := d.GetOk("static_routing_default_gateway"); ok {
+			edge.Features.Routing.StaticRouting.DefaultRoute.GatewayAddress = v.(string)
+		}
+		if v, ok := d.GetOk("static_routing_default_mtu"); ok {
+			edge.Features.Routing.StaticRouting.DefaultRoute.Mtu = v.(int)
+		} else {
+			edge.Features.Routing.StaticRouting.DefaultRoute.Mtu = 1500
+		}
+
+		//if OSPF interfaces are defined
+		if v, ok := d.GetOk("routing_ospf_interfaces"); ok {
+			var ospfRouting edgegateway.OSPFRouting
+			edge.Features.Routing.OSPFRouting = ospfRouting
+			var ospfRoutingInterfaces edgegateway.OSPFInterfaces
+			var ospfRoutingAreas edgegateway.OSPFAreas
+			edge.Features.Routing.OSPFRouting.OSPFInterfaces = ospfRoutingInterfaces
+			edge.Features.Routing.OSPFRouting.OSPFAreas = ospfRoutingAreas
+			edge.Features.Routing.OSPFRouting.OSPFInterfaces.OSPFInterfaceList = buildOSPFInterfaces(v.([]interface{}))
+			if v, ok := d.GetOk("routing_ospf_areas"); ok {
+				edge.Features.Routing.OSPFRouting.OSPFAreas.OSPFAreaList = buildOSPFAreas(v.([]interface{}))
+			}
+			if v, ok := d.GetOk("routing_ospf_redistribution_enabled"); ok {
+				var ospfRedistribution edgegateway.OSPFRedistribution
+				edge.Features.Routing.OSPFRouting.Redistribution = ospfRedistribution
+				edge.Features.Routing.OSPFRouting.Redistribution.Enabled = v.(bool)
+				edge.Features.Routing.OSPFRouting.Redistribution.Rules = []edgegateway.OSPFRule{}
+			}
+			if v, ok := d.GetOk("routing_ospf_graceful_restart"); ok {
+				edge.Features.Routing.OSPFRouting.GracefulRestart = v.(bool)
+			} else {
+				edge.Features.Routing.OSPFRouting.GracefulRestart = true
+			}
+			if v, ok := d.GetOk("routing_ospf_default_originate"); ok {
+				edge.Features.Routing.OSPFRouting.DefaultOriginate = v.(bool)
+			} else {
+				edge.Features.Routing.OSPFRouting.DefaultOriginate = false
+			}
+		}
+	}
+
+	var dhcp edgegateway.Dhcp
+	edge.Features.Dhcp = dhcp
+	if v, ok := d.GetOk("dhcp_static_bindings"); ok {
+		var dhcpStaticBindings edgegateway.DhcpStaticBindings
+		edge.Features.Dhcp.StaticBindings = dhcpStaticBindings
+		edge.Features.Dhcp.StaticBindings.StaticBindingList = buildDhcpStaticBindings(v.([]interface{}))
+	}
+	if v, ok := d.GetOk("dhcp_ip_pools"); ok {
+		var dhcpIpPools edgegateway.DhcpIpPools
+		edge.Features.Dhcp.IpPools = dhcpIpPools
+		edge.Features.Dhcp.IpPools.IpPoolList = buildDhcpIpPools(v.([]interface{}))
 	}
 
 	createAPI := edgegateway.NewCreate(&edge)
@@ -311,6 +695,65 @@ func resourceEdgeGatewayRead(d *schema.ResourceData, m interface{}) error {
 		vnicList = append(vnicList, &vnicResource)
 	}
 	d.Set("vnics", vnicList)
+	d.Set("firewall_default_policy_action", edgegateway.Features.Firewall.DefaultPolicy.Action)
+	d.Set("firewall_default_policy_logging_enabled", edgegateway.Features.Firewall.DefaultPolicy.LoggingEnabled)
+	d.Set("firewall_tcp_timeout_established", edgegateway.Features.Firewall.GlobalConfig.TcpTimeoutEstablished)
+
+	d.Set("router_id", edgegateway.Features.Routing.GlobalConfig.RouterId)
+	d.Set("router_ecmp", edgegateway.Features.Routing.GlobalConfig.ECMP)
+	d.Set("static_routing_default_vnic", edgegateway.Features.Routing.GlobalConfig.ECMP)
+	var ospfAreaList []*schema.ResourceData
+	for _, area := range edgegateway.Features.Routing.OSPFRouting.OSPFAreas.OSPFAreaList {
+		var ospfAreaResource schema.ResourceData
+		ospfAreaResource.Set("area_id", area.AreaId)
+		ospfAreaResource.Set("type", area.Type)
+		ospfAreaList = append(ospfAreaList, &ospfAreaResource)
+	}
+	d.Set("routing_ospf_areas", ospfAreaList)
+	var ospfInterfaceList []*schema.ResourceData
+	for _, intf := range edgegateway.Features.Routing.OSPFRouting.OSPFInterfaces.OSPFInterfaceList {
+		var ospfInterfaceResource schema.ResourceData
+		ospfInterfaceResource.Set("vnic_id", intf.Vnic)
+		ospfInterfaceResource.Set("area_id", intf.AreaId)
+		ospfInterfaceList = append(ospfInterfaceList, &ospfInterfaceResource)
+	}
+	d.Set("routing_ospf_interfaces", ospfInterfaceList)
+	d.Set("routing_ospf_redistribution_enabled", edgegateway.Features.Routing.OSPFRouting.Redistribution.Enabled)
+	d.Set("routing_ospf_graceful_restart", edgegateway.Features.Routing.OSPFRouting.GracefulRestart)
+	d.Set("routing_ospf_default_originate", edgegateway.Features.Routing.OSPFRouting.DefaultOriginate)
+
+	var dhcpStaticBindingList []*schema.ResourceData
+	for _, sb := range edgegateway.Features.Dhcp.StaticBindings.StaticBindingList {
+		var dhcpStaticBinding schema.ResourceData
+		dhcpStaticBinding.Set("macaddress", sb.MacAddress)
+		dhcpStaticBinding.Set("vm_id", sb.VmId)
+		dhcpStaticBinding.Set("vnic_id", sb.VnicId)
+		dhcpStaticBinding.Set("hostname", sb.Hostname)
+		dhcpStaticBinding.Set("ipaddress", sb.IpAddress)
+		dhcpStaticBinding.Set("subnetmask", sb.SubnetMask)
+		dhcpStaticBinding.Set("defaultgateway", sb.DefaultGateway)
+		dhcpStaticBinding.Set("domainname", sb.DomainName)
+		dhcpStaticBinding.Set("primarydns", sb.PrimaryNameServer)
+		dhcpStaticBinding.Set("secondarydns", sb.SecondaryNameServer)
+		dhcpStaticBinding.Set("lease", sb.LeaseTime)
+		dhcpStaticBinding.Set("autoconfigure_dns", sb.AutoConfigureDNS)
+		dhcpStaticBindingList = append(dhcpStaticBindingList, &dhcpStaticBinding)
+	}
+	d.Set("dhcp_static_bindings", dhcpStaticBindingList)
+	var dhcpIpPoolList []*schema.ResourceData
+	for _, sb := range edgegateway.Features.Dhcp.IpPools.IpPoolList {
+		var dhcpIpPool schema.ResourceData
+		dhcpIpPool.Set("iprange", sb.IpRange)
+		dhcpIpPool.Set("subnetmask", sb.SubnetMask)
+		dhcpIpPool.Set("defaultgateway", sb.DefaultGateway)
+		dhcpIpPool.Set("domainname", sb.DomainName)
+		dhcpIpPool.Set("primarydns", sb.PrimaryNameServer)
+		dhcpIpPool.Set("secondarydns", sb.SecondaryNameServer)
+		dhcpIpPool.Set("lease", sb.LeaseTime)
+		dhcpIpPool.Set("autoconfigure_dns", sb.AutoConfigureDNS)
+		dhcpIpPoolList = append(dhcpIpPoolList, &dhcpIpPool)
+	}
+	d.Set("dhcp_ip_pools", dhcpIpPoolList)
 
 	return nil
 }
